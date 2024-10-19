@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { Groq } from 'groq-sdk'
 import formidable from 'formidable'
 import fs from 'fs'
+import OpenAI from 'openai'
+import path from 'path'
 
 export const config = {
   api: {
@@ -9,8 +10,8 @@ export const config = {
   },
 }
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -18,31 +19,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const form = new formidable.IncomingForm()
+  const form = formidable()
   form.parse(req, async (err, fields, files) => {
     if (err) {
+      console.error('Form parsing error:', err)
       return res.status(500).json({ error: 'Error parsing form data' })
     }
 
-    const file = files.file as formidable.File
+    const file = files.file?.[0]
     if (!file) {
       return res.status(400).json({ error: 'No file uploaded' })
     }
 
-    try {
-      const fileBuffer = fs.readFileSync(file.filepath)
-      const base64Audio = fileBuffer.toString('base64')
+    console.log('File details:', {
+      name: file.originalFilename,
+      type: file.mimetype,
+      size: file.size,
+      path: file.filepath
+    })
 
-      const response = await groq.transcribe({
-        audio: base64Audio,
-        model: 'whisper-1',
-        language: 'en',
+    try {
+      const fileStream = fs.createReadStream(file.filepath)
+
+      const response = await openai.audio.transcriptions.create({
+        file: fileStream,
+        model: "whisper-1",
+        response_format: "text"
       })
 
-      res.status(200).json({ transcription: response.text })
-    } catch (error) {
+      console.log('Transcription response:', response)
+
+      res.status(200).json({ transcription: response })
+    } catch (error: any) {
       console.error('Transcription error:', error)
-      res.status(500).json({ error: 'Transcription failed' })
+      res.status(500).json({ error: error.message || 'Transcription failed' })
+    } finally {
+      // Clean up the temporary file
+      fs.unlinkSync(file.filepath)
     }
   })
 }
