@@ -39,10 +39,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     try {
-      const fileStream = fs.createReadStream(file.filepath)
-
       const response = await openai.audio.transcriptions.create({
-        file: fileStream,
+        file: fs.createReadStream(file.filepath),
         model: "whisper-1",
         response_format: "text"
       })
@@ -52,6 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(200).json({ transcription: response })
     } catch (error: any) {
       console.error('Transcription error:', error)
+      console.error('Error details:', JSON.stringify(error, null, 2))
       res.status(500).json({ error: error.message || 'Transcription failed' })
     } finally {
       // Clean up the temporary file
