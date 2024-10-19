@@ -7,6 +7,7 @@ export function RouteTs() {
   const [file, setFile] = useState<File | null>(null)
   const [transcription, setTranscription] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -19,6 +20,7 @@ export function RouteTs() {
     if (!file) return
 
     setIsLoading(true)
+    setError(null)
     const formData = new FormData()
     formData.append('file', file)
 
@@ -29,13 +31,15 @@ export function RouteTs() {
       })
 
       if (!response.ok) {
-        throw new Error('Transcription failed')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Transcription failed')
       }
 
       const data = await response.json()
       setTranscription(data.transcription)
     } catch (error) {
       console.error('Error:', error)
+      setError(error instanceof Error ? error.message : 'An unknown error occurred')
     } finally {
       setIsLoading(false)
     }
@@ -71,6 +75,11 @@ export function RouteTs() {
             {isLoading ? 'Transcribing...' : 'Transcribe'}
           </button>
         </form>
+        {error && (
+          <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            Error: {error}
+          </div>
+        )}
         {transcription && (
           <div className="mt-8 p-4 bg-indigo-50 rounded-lg">
             <h2 className="text-xl font-semibold mb-4 text-indigo-700 flex items-center">
