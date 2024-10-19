@@ -3,6 +3,7 @@ import formidable from 'formidable'
 import fs from 'fs'
 import OpenAI from 'openai'
 import path from 'path'
+import mime from 'mime-types'
 
 export const config = {
   api: {
@@ -37,6 +38,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       size: file.size,
       path: file.filepath
     })
+
+    const supportedFormats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
+    const fileExtension = path.extname(file.originalFilename || '').slice(1).toLowerCase()
+    const mimeType = mime.lookup(file.originalFilename || '')
+
+    if (!supportedFormats.includes(fileExtension) && !mimeType) {
+      console.error('Unsupported file format:', fileExtension, mimeType)
+      return res.status(400).json({ error: 'Unsupported file format' })
+    }
 
     try {
       const response = await openai.audio.transcriptions.create({
