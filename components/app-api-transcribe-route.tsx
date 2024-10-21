@@ -12,11 +12,12 @@ interface TranscriptionSegment {
 interface RouteTsProps {
   onTranscriptionComplete: (result: string | TranscriptionSegment[]) => void
   setIsLoading: (loading: boolean) => void
+  isLoading: boolean
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-export function RouteTs({ onTranscriptionComplete, setIsLoading }: RouteTsProps) {
+export function RouteTs({ onTranscriptionComplete, setIsLoading, isLoading }: RouteTsProps) {
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [includeTimestamps, setIncludeTimestamps] = useState(false)
